@@ -48,7 +48,7 @@ python -m mlx_lm lora --model mlx-community/phi-4-8bit --data output \
 ```
 
 ### Benchmark vanilla model vs fine-tuned model
-Benchmark on dev missci split to avoid data leakage:
+Benchmark on test missci split to avoid data leakage:
 ```bash
 python run_mlx_fallacy_classification.py --model-name phi-4-8bit
 python run_mlx_fallacy_classification.py --model-name phi-4-8bit --adapter-path adapters
@@ -56,11 +56,9 @@ python run_mlx_fallacy_classification.py --model-name phi-4-8bit --adapter-path 
 ```bash
 cd missci
 
-python run-fallacy-classification-with-gold-premise.py parse-llm-output phi-4-8b
-it_cls_with_premise_classify-D_test.jsonl
+python run-fallacy-classification-with-gold-premise.py parse-llm-output phi-4-8bit_cls_with_premise_classify-D_test.jsonl
 
-python run-fallacy-classification-with-gold-premise.py parse-llm-output phi-4-8b
-it_cls_with_premise_classify-D_test_adapters.jsonl
+python run-fallacy-classification-with-gold-premise.py parse-llm-output phi-4-8bit_cls_with_premise_classify-D_test_adapters.jsonl
 ```
 
 | Model           | Vanilla acc    | Vanilla F1    | Finetune acc | Finetune F1 | Lora layers | Params |
@@ -69,3 +67,33 @@ it_cls_with_premise_classify-D_test_adapters.jsonl
 | Phi-4 (8-bit)   | 0.667          | 0.550         | 0.762        | 0.690       | 16          | 15B    |
 
 \* Table 3 from [MISSCI: Reconstructing Fallacies in Misrepresented Science](https://arxiv.org/pdf/2406.03181)
+
+### Cross-dataset evaluation with MAFALDA
+To test whether the pipeline generalizes beyond the MISSCI domain, we evaluate the best-performing fine-tuned model (LLaMA 3.1 4-bit, highest F1 on MISSCI) on the [MAFALDA](https://github.com/ChadiHelwe/MAFALDA) dataset (NAACL 2024), which contains 200 span-annotated text samples with 23 fallacy classes. Adapters are from fine-tuning on MISSCI synthetic data only — no MAFALDA samples are used during training.
+
+The conversion script maps 7 MAFALDA classes to 6 MISSCI classes:
+
+| MAFALDA class | MISSCI class |
+|---|---|
+| equivocation | Ambiguity |
+| causal oversimplification | Causal Oversimplification |
+| false causality | Causal Oversimplification |
+| false dilemma | False Dilemma / Affirming the Disjunct |
+| hasty generalization | Hasty Generalization |
+| false analogy | False Equivalence |
+| fallacy of division | Fallacy of Division/Composition |
+
+16 MAFALDA classes have no MISSCI equivalent (mostly emotion- and credibility-based fallacies) and are skipped. 3 MISSCI classes (Impossible Expectations, Biased Sample Fallacy, Fallacy of Exclusion) have no MAFALDA counterpart.
+
+```bash
+python create_mafalda_dataset.py
+```
+
+This produces `dataset/mafalda.test.jsonl` (103 evaluation entries) that can be used with the same classification pipeline:
+```bash
+python run_mlx_fallacy_classification.py --model-name Llama-3.1-8B-Instruct-4bit --dataset-path dataset/mafalda.test.jsonl
+python run_mlx_fallacy_classification.py --model-name Llama-3.1-8B-Instruct-4bit --dataset-path dataset/mafalda.test.jsonl --adapter-path adapters
+```
+| Model             | Vanilla acc    | Vanilla F1    | Finetune acc | Finetune F1 | Lora layers | Params |
+|-------------------|----------------|---------------|--------------|-------------|-------------|--------|
+| LLaMA 3.1 (4-bit) | 0.087          | 0.075         | 0.222        | 0.301       | 16          | 8B     |

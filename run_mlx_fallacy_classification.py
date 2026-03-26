@@ -88,8 +88,9 @@ def run_mlx_fallacy_classification(
     split: MissciSplit = MissciSplit.TEST,
     output_folder: str = "missci/predictions/classify-given-gold-premise-raw",
     adapter_path: str | None = None,
+    dataset_path: str | None = None,
 ) -> None:
-    data = list(read_jsonl(f"missci/dataset/{split}.missci.jsonl"))
+    data = list(read_jsonl(dataset_path or f"missci/dataset/{split}.missci.jsonl"))
     template_filler = MLXClassifyGenerateTemplateFiller(prompt_template)
     query_mlx_model(
         model_name=model_name,
