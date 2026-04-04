@@ -68,8 +68,13 @@ python run-fallacy-classification-with-gold-premise.py parse-llm-output phi-4-8b
 
 \* Table 3 from [MISSCI: Reconstructing Fallacies in Misrepresented Science](https://arxiv.org/pdf/2406.03181)
 
-### Cross-dataset evaluation with MAFALDA
-To test whether the pipeline generalizes beyond the MISSCI domain, we evaluate the best-performing fine-tuned model (LLaMA 3.1 4-bit, highest F1 on MISSCI) on the [MAFALDA](https://github.com/ChadiHelwe/MAFALDA) dataset (NAACL 2024), which contains 200 span-annotated text samples with 23 fallacy classes. Adapters are from fine-tuning on MISSCI synthetic data only — no MAFALDA samples are used during training.
+### Cross-dataset evaluation
+
+To test whether the pipeline generalizes beyond the MISSCI domain, we evaluate the best-performing fine-tuned model (LLaMA 3.1 4-bit, highest F1 on MISSCI) on external fallacy datasets. Adapters are from fine-tuning on MISSCI synthetic data only — no external samples are used during training. Each dataset has its own conversion script that maps source fallacy classes to the MISSCI 9-class taxonomy and produces a JSONL file compatible with the same classification pipeline.
+
+#### MAFALDA
+
+The [MAFALDA](https://github.com/ChadiHelwe/MAFALDA) dataset (NAACL 2024) contains 200 span-annotated text samples with 23 fallacy classes.
 
 The conversion script maps 7 MAFALDA classes to 6 MISSCI classes:
 
@@ -89,11 +94,45 @@ The conversion script maps 7 MAFALDA classes to 6 MISSCI classes:
 python create_mafalda_dataset.py
 ```
 
-This produces `dataset/mafalda.test.jsonl` (103 evaluation entries) that can be used with the same classification pipeline:
+This produces `dataset/mafalda.test.jsonl` (103 evaluation entries):
+
 ```bash
 python run_mlx_fallacy_classification.py --model-name Llama-3.1-8B-Instruct-4bit --dataset-path dataset/mafalda.test.jsonl
 python run_mlx_fallacy_classification.py --model-name Llama-3.1-8B-Instruct-4bit --dataset-path dataset/mafalda.test.jsonl --adapter-path adapters
 ```
+
 | Model             | Vanilla acc    | Vanilla F1    | Finetune acc | Finetune F1 | Lora layers | Params |
 |-------------------|----------------|---------------|--------------|-------------|-------------|--------|
 | LLaMA 3.1 (4-bit) | 0.087          | 0.075         | 0.222        | 0.301       | 16          | 8B     |
+
+#### Logic
+
+The [Logic](https://github.com/causalNLP/logical-fallacy) dataset (EMNLP 2022 Findings) contains sentence-level fallacy annotations across 13 classes from both educational (`edu_*.csv`) and climate-related (`climate_*.csv`) sources.
+
+The conversion script maps 6 Logic classes to 5 MISSCI classes:
+
+| Logic class | MISSCI class |
+|---|---|
+| equivocation | Ambiguity |
+| circular reasoning | Ambiguity |
+| false causality | Causal Oversimplification |
+| false dilemma | False Dilemma / Affirming the Disjunct |
+| faulty generalization | Hasty Generalization |
+| fallacy of logic | False Equivalence |
+
+7 Logic classes have no MISSCI equivalent (ad hominem, ad populum, appeal to emotion, fallacy of credibility, fallacy of extension, fallacy of relevance, intentional) and are skipped. 4 MISSCI classes (Biased Sample Fallacy, Fallacy of Division/Composition, Fallacy of Exclusion, Impossible Expectations) have no Logic counterpart.
+
+```bash
+python create_logic_dataset.py
+```
+
+This produces `dataset/logic.test.jsonl` (1547 evaluation entries):
+
+```bash
+python run_mlx_fallacy_classification.py --model-name Llama-3.1-8B-Instruct-4bit --dataset-path dataset/logic.test.jsonl
+python run_mlx_fallacy_classification.py --model-name Llama-3.1-8B-Instruct-4bit --dataset-path dataset/logic.test.jsonl --adapter-path adapters
+```
+
+| Model             | Vanilla acc    | Vanilla F1    | Finetune acc | Finetune F1 | Lora layers | Params |
+|-------------------|----------------|---------------|--------------|-------------|-------------|--------|
+| LLaMA 3.1 (4-bit) | 0.178          |  0.175        | 0.269        | 0.278       | 16          | 8B     |
