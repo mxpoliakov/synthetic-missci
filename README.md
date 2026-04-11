@@ -103,7 +103,7 @@ python run_mlx_fallacy_classification.py --model-name Llama-3.1-8B-Instruct-4bit
 
 | Model             | Vanilla acc    | Vanilla F1    | Finetune acc | Finetune F1 | Lora layers | Params |
 |-------------------|----------------|---------------|--------------|-------------|-------------|--------|
-| LLaMA 3.1 (4-bit) | 0.087          | 0.075         | 0.222        | 0.301       | 16          | 8B     |
+| LLaMA 3.1 (4-bit) | 0.087          | 0.075         | 0.222        | 0.301       | 32          | 8B     |
 
 #### Logic
 
